@@ -4,6 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 using RealTimeNotificationSys.Core.Interfaces;
 using RealTimeNotificationSys.Core.Services;
 using RealTimeNotificationSys.Infrastructure.Data;
+using RealTimeNotificationSys.Infrastructure.Hubs;
+using StackExchange.Redis;
+using System;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +14,35 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+builder.Services.AddScoped<IChannelService, ChannelService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
+
+
+// Add Redis connection for publishing and consuming messages
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    return ConnectionMultiplexer.Connect("localhost:6379");  // Update with your Redis server
+});
+
+// Register services for publishing and consuming notifications
+builder.Services.AddScoped<NotificationPublisher>();
+builder.Services.AddScoped<NotificationConsumer>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
+
+
+
+builder.Services.AddSignalR();
 
 
 // Add services to the container.
@@ -19,6 +50,9 @@ builder.Services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
+
+
+
 
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
@@ -56,6 +90,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseCors("AllowAll");
+
+// Configure the HTTP request pipeline.
+app.MapHub<NotificationHub>("/notificationHub");  // SignalR Hub URL for clients to connect
+app.MapControllers();  // API Controllers
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -64,7 +104,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
+app.UseWebSockets();
 // Use authentication middleware
 app.UseAuthentication();
 

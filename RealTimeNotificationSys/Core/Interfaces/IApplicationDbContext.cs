@@ -10,6 +10,8 @@ namespace RealTimeNotificationSys.Core.Interfaces
         DbSet<Notification> Notifications { get; set; }
         DbSet<Channel> Channels { get; set; }
 
+        DbSet<UserChannel> UserChannels { get; set; }
+
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

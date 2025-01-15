@@ -26,6 +26,12 @@ namespace RealTimeNotificationSys.Core.Services
                 throw new InvalidOperationException("A user with this email already exists.");
             }
 
+            // Password validation (e.g., check for minimum length)
+            if (string.IsNullOrEmpty(password) || password.Length < 6)  // Adjust according to your requirements
+            {
+                throw new InvalidOperationException("Password must be at least 6 characters.");
+            }
+
             // Create new user
             var user = new User
             {
